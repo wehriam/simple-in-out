@@ -78,7 +78,7 @@ SimpleInOut.prototype._get = function(path, query_parameters, attempt){
   query_parameters = query_parameters || {};
   attempt = attempt || 1;
   var client = this;
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     superagent
       .get("https://www.simpleinout.com" + path)
       .query(query_parameters)
