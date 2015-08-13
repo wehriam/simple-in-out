@@ -1,17 +1,21 @@
 {
   "name": "simple-in-out",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Node client for Simple In/Out.",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "co": "^4.6.0",
-    "moment": "^2.10.6",
+    "aws-sdk": "^2.1.45",
     "superagent": "^1.3.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha":"^2.2.5",
+    "mocha-log":"^0.0.1",
+    "co": "^4.6.0",
+    "moment": "^2.10.6"
+  },
   "scripts": {
     "test": "bash run-tests.sh"
   },

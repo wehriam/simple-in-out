@@ -1,4 +1,5 @@
 const superagent = require("superagent");
+const AWS = require('aws-sdk');
 
 const SimpleInOut = function(options){
   if(!options.client_id) {
@@ -7,20 +8,53 @@ const SimpleInOut = function(options){
   if(!options.client_secret) {
     throw new Error("Missing required parameter 'client_secret'");
   }
+  if(!options.redirect_uri) {
+    throw new Error("Missing required parameter 'redirect_uri'");
+  }
   this.client_id = options.client_id;
   this.client_secret = options.client_secret;
+  this.redirect_uri = options.redirect_uri;
   this.access_token = options.access_token || null;
   this.refresh_token = options.refresh_token || null;
+  if(options.aws_access_key_id || options.aws_secret_access_key || options.aws_s3_bucket || options.aws_s3_key) {
+    if(!options.aws_access_key_id) {
+      throw new Error("Missing required parameter 'aws_secret_access_key'");
+    }
+    if(!options.aws_secret_access_key) {
+      throw new Error("Missing required parameter 'aws_secret_access_key'");
+    }
+    if(!options.aws_s3_bucket) {
+      throw new Error("Missing required parameter 'aws_s3_bucket'");
+    }
+    if(!options.aws_s3_key) {
+      throw new Error("Missing required parameter 'aws_s3_key'");
+    }
+    this._aws_s3_bucket = new AWS.S3({
+      accessKeyId: options.aws_access_key_id,
+      secretAccessKey: options.aws_secret_access_key,
+      params: {
+        Key: options.aws_s3_key,
+        Bucket: options.aws_s3_bucket,
+        ContentType: "application/json"
+      }
+    });
+  }
 };
 
-SimpleInOut.prototype.get_access_token = function(username, password){
+SimpleInOut.prototype.get_access_token = function(authorization_code){
+  if(!authorization_code) {
+    if(this._aws_s3_bucket) {
+      return this.get_credentials_from_aws_s3();
+    } else {
+      throw new Error("Missing required parameter 'authorization_code'");
+    }
+  }
   const options = {
-    grant_type: "password",
+    grant_type: "authorization_code",
     client_id: this.client_id,
     client_secret: this.client_secret,
-    username: username,
-    password: password,
-    scope:"read write executive"
+    redirect_uri: this.redirect_uri,
+    code: authorization_code
   };
   var client = this;
   return new Promise(function(resolve, reject){
@@ -33,22 +67,84 @@ SimpleInOut.prototype.get_access_token = function(username, password){
         if(error) {
           return reject(error);
         }
-        var result = JSON.parse(response.text);
-        client.access_token = result.access_token;
-        client.refresh_token = result.refresh_token;
-        return resolve(result);
+        return resolve(JSON.parse(response.text));
       });
+  }).then(function(result){
+    return client.set_credentials(result);
+  }, function(error){
+    if(error.status === 401 && client._aws_s3_bucket) {
+      return client.get_credentials_from_aws_s3();
+    }
+    throw error;
   });
 };
 
-SimpleInOut.prototype.update_access_token = function(){
+SimpleInOut.prototype.get_credentials_from_aws_s3 = function(){
+  if(!this._aws_s3_bucket) {
+    throw new Error("Missing required constructor parameters aws_access_key_id, aws_secret_access_key, aws_s3_bucket, and aws_s3_key.");
+  }
+  var client = this;
+  return new Promise(function(resolve, reject){
+    client._aws_s3_bucket.getObject({}, function(error, data) {
+      if(error) {
+        return reject(error);
+      }
+      var result = JSON.parse(data.Body);
+      if(!result.access_token) {
+        throw new Error("S3 credentials missing required property 'access_token'");
+      }
+      if(!result.refresh_token) {
+        throw new Error("S3 credentials missing required property 'refresh_token'");
+      }
+      client.access_token = result.access_token;
+      client.refresh_token = result.refresh_token;
+      return resolve(result);
+    });
+  });
+};
+
+SimpleInOut.prototype.set_credentials = function(options){
+  if(!options.access_token) {
+    throw new Error("Missing required parameter 'access_token'");
+  }
+  if(!options.refresh_token) {
+    throw new Error("Missing required parameter 'refresh_token'");
+  }
+  this.access_token = options.access_token;
+  this.refresh_token = options.refresh_token;
+  if(!this._aws_s3_bucket) {
+    return Promise.resolve(options);
+  }
+  var client = this;
+  return new Promise(function(resolve, reject){
+    client._aws_s3_bucket.putObject({
+      Body: new Buffer(JSON.stringify(options))
+    }, function(error, data) {
+      if(error) {
+        return reject(error);
+      }
+      resolve(options);
+    });
+  });
+};
+
+SimpleInOut.prototype.refresh_access_token = function(){
+  var client = this;
+  if(!this.refresh_token) {
+    if(this._aws_s3_bucket) {
+      return this.get_credentials_from_aws_s3().then(function(){
+        return client.refresh_access_token();
+      });
+    } else {
+      throw new Error("No refresh token.");
+    }
+  }
   const options = {
     grant_type: "refresh_token",
     client_id: this.client_id,
     client_secret: this.client_secret,
     refresh_token: this.refresh_token
   };
-  var client = this;
   return new Promise(function(resolve, reject){
     superagent
       .post("https://www.simpleinout.com/oauth/token")
@@ -59,25 +155,27 @@ SimpleInOut.prototype.update_access_token = function(){
         if(error) {
           return reject(error);
         }
-        var result = JSON.parse(response.text);
-        client.access_token = result.access_token;
-        client.refresh_token = result.refresh_token;
-        return resolve(result);
+        return resolve(JSON.parse(response.text));
       });
+  }).then(function(result){
+    return client.set_credentials(result);
   });
 };
 
 SimpleInOut.prototype._get = function(path, query_parameters, attempt){
+  var client = this;
   if(!this.access_token) {
-    throw new Error("Missing required parameter 'access_token'");
-  }
-  if(!this.refresh_token) {
-    throw new Error("Missing required parameter 'refresh_token'");
+    if(this._aws_s3_bucket) {
+      return this.get_credentials_from_aws_s3().then(function(){
+        return client._get(path, query_parameters, attempt);
+      });
+    } else {
+      throw new Error("No access token.");
+    }
   }
   const access_token = this.access_token;
   query_parameters = query_parameters || {};
   attempt = attempt || 1;
-  var client = this;
   return new Promise(function(resolve, reject) {
     superagent
       .get("https://www.simpleinout.com" + path)
@@ -92,7 +190,7 @@ SimpleInOut.prototype._get = function(path, query_parameters, attempt){
       });
   }).catch(function(error){
     if(error.status === 401 && attempt < 2) {
-      return client.update_access_token().then(function(){
+      return client.refresh_access_token().then(function(){
         return client._get(path, query_parameters, attempt + 1);
       });
     } else {
