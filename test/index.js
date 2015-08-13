@@ -25,12 +25,12 @@ describe('Simple In/Out with S3 Credential Storage', function() {
     assert(credentials.access_token);
     assert(credentials.refresh_token);
   }));
-  it('should refresh the access token and store them on AWS S3.', co.wrap(function*() {
+  it('should refresh the access token and store it on AWS S3.', co.wrap(function*() {
     var credentials = yield s3_client.refresh_access_token();
     assert(credentials.access_token);
     assert(credentials.refresh_token);
   }));
-  it('should set credentials', co.wrap(function*() {
+  it('should set credentials and store them on AWS S3.', co.wrap(function*() {
     var credentials = yield s3_client.set_credentials({access_token: s3_client.access_token, refresh_token: s3_client.refresh_token});
     assert(credentials.access_token);
     assert(credentials.refresh_token);
