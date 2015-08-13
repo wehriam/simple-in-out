@@ -5,11 +5,13 @@ See [Simple In/Out API documentation](http://www.simplymadeapps.com/developers/s
 
 ## Installation
 
-```bash
+```
 npm install simple-in-out
 ```
 
 ## Usage
+
+Compatible with Node.js >= 0.12.0 or io.js >= 1.0.0.
 
 ### With AWS S3 Credential Storage
 
@@ -37,11 +39,11 @@ var client_b = new SimpleInOut({
 });
 
 client_a.get_access_token(process.env.SIMPLE_IN_OUT_AUTHORIZATION_CODE).then(function(){
-  // Credentials are stored on AWS S3 after initialization with authorization code.
+  // Credentials are stored on AWS S3 after initialization with authorization code
   return client_a.ok();
 }).then(function(result){
   assert(result.version);
-  // Credentials fetched from AWS S3.
+  // Credentials fetched from AWS S3
   return client_b.ok();
 }).then(function(result){
   assert(result.version);
@@ -79,7 +81,7 @@ client_a.get_access_token(process.env.SIMPLE_IN_OUT_AUTHORIZATION_CODE).then(fun
 });
 ```
 
-With stored access and refresh tokens:
+With access and refresh tokens:
 
 ```js
 var SimpleInOut = require("simple-in-out");
@@ -99,6 +101,8 @@ client.ok().then(function(result){
 
 ## API
 
+All methods return native promises.
+
 ### new SimpleInOut(options)
 
 Constructor.
@@ -113,7 +117,7 @@ __Required for AWS S3 credential storage:__
 
  * `options.aws_access_key_id`: Amazon AWS access key ID string.
  * `options.aws_secret_access_key`: Amazon AWS secret access key string.
- * `options.aws_s3_bucket`: Amazon AWS S3 bucket name string. Bucket must already exist.
+ * `options.aws_s3_bucket`: Amazon AWS S3 bucket name string. Bucket must exist.
  * `options.aws_s3_key`: Amazon AWS S3 key string.
 
 __Optional:__
@@ -123,11 +127,11 @@ __Optional:__
 
 ### .get_access_token([authorization_code])
 
-Get access and refresh tokens via oAuth 2 flow or from AWS S3 credential storage.
+Get access and refresh tokens via oAuth2 flow or from AWS S3 credential storage.
 
 __Required for use without AWS S3 credential storage, or when intializing with AWS S3 credential storage:__
 
- * `authorization_code`: Authorization code from Simple In/Out oAuth 2 flow.
+ * `authorization_code`: Authorization code from Simple In/Out oAuth2 flow.
 
 ### .get_credentials_from_aws_s3()
 
@@ -200,6 +204,6 @@ __Optional:__
 ## Testing
 
  * Copy `run-tests.sh.sample` to `run-tests.sh`.
- * Generate an authorization code via the Simple In/Out oAuth 2 flow: `https://www.simpleinout.com/oauth/authorize?response_type=code&client_id=XXXXXXXX&redirect_uri=XXXXXXXX`
+ * Generate an authorization code via the Simple In/Out oAuth2 flow: `https://www.simpleinout.com/oauth/authorize?response_type=code&client_id=XXXXXXXX&redirect_uri=XXXXXXXX`
  * Edit `run-tests.sh` to include AWS credentials, Simple In/Out credentials, and the authorization code.
  * Run `npm test`
