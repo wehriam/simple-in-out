@@ -13,6 +13,8 @@ npm install simple-in-out
 
 Compatible with Node.js >= 0.12.0 or io.js >= 1.0.0.
 
+All methods return native promises.
+
 ### With AWS S3 Credential Storage
 
 ```js
@@ -101,8 +103,6 @@ client.ok().then(function(result){
 ```
 
 ## API
-
-All methods return native promises.
 
 ### new SimpleInOut(options)
 
