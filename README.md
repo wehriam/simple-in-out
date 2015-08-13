@@ -70,6 +70,7 @@ var client_b = new SimpleInOut({
 });
 
 client_a.get_access_token(process.env.SIMPLE_IN_OUT_AUTHORIZATION_CODE).then(function(credentials){
+  // Credentials can be set directly, bypassing get_access_token()
   return client_b.set_credentials(credentials);
 }).then(function(){
   return client_a.ok();
@@ -105,7 +106,7 @@ All methods return native promises.
 
 ### new SimpleInOut(options)
 
-Constructor.
+Simple In/Out API client constructor.
 
 __Required:__
 
