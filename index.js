@@ -128,8 +128,9 @@ SimpleInOut.prototype.set_credentials = function(options){
   });
 };
 
-SimpleInOut.prototype.refresh_access_token = function(){
+SimpleInOut.prototype.refresh_access_token = function(attempt){
   var client = this;
+  attempt = attempt || 1;
   if(!this.refresh_token) {
     if(this._aws_s3_bucket) {
       return this.get_credentials_from_aws_s3().then(function(){
@@ -159,6 +160,14 @@ SimpleInOut.prototype.refresh_access_token = function(){
       });
   }).then(function(result){
     return client.set_credentials(result);
+  }, function(error){
+    if(error.status === 401 && client._aws_s3_bucket && attempt < 2) {
+      return client.get_credentials_from_aws_s3().then(function(){
+        return client.refresh_access_token(attempt + 1);
+      });
+    } else {
+      throw error;
+    }
   });
 };
 
