@@ -75,6 +75,9 @@ SimpleInOut.prototype.get_access_token = function(authorization_code){
     if(error.status === 401 && client._aws_s3_bucket) {
       return client.get_credentials_from_aws_s3();
     }
+    if(typeof error.message === "string") {
+      error.message = "Get Access Token: "  + error.message;
+    }
     throw error;
   });
 };
@@ -87,6 +90,9 @@ SimpleInOut.prototype.get_credentials_from_aws_s3 = function(){
   return new Promise(function(resolve, reject){
     client._aws_s3_bucket.getObject({}, function(error, data) {
       if(error) {
+        if(typeof error.message === "string") {
+          error.message = "Get Credentials From S3: "  + error.message;
+        }
         return reject(error);
       }
       var result = JSON.parse(data.Body);
@@ -121,6 +127,9 @@ SimpleInOut.prototype.set_credentials = function(options){
       Body: new Buffer(JSON.stringify(options))
     }, function(error, data) {
       if(error) {
+        if(typeof error.message === "string") {
+          error.message = "Set Credentials: "  + error.message;
+        }
         return reject(error);
       }
       resolve(options);
@@ -154,6 +163,9 @@ SimpleInOut.prototype.refresh_access_token = function(attempt){
       .set('Accept', 'application/json')
       .end(function(error, response){
         if(error) {
+          if(typeof error.message === "string") {
+            error.message = "Refresh Token: "  + error.message;
+          }
           return reject(error);
         }
         return resolve(JSON.parse(response.text));
@@ -203,6 +215,9 @@ SimpleInOut.prototype._get = function(path, query_parameters, attempt){
         return client._get(path, query_parameters, attempt + 1);
       });
     } else {
+      if(typeof error.message === "string") {
+        error.message = "Get " + path + ": "  + error.message;
+      }
       throw error;
     }
   });
